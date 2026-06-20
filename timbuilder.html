@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>Pokedex Team Builder</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background: #020617; color: white; font-family: sans-serif; }
+        .card { background: #0f172a; border: 1px solid #334155; padding: 1rem; border-radius: 0.75rem; }
+    </style>
+</head>
+<body class="p-4">
+    <div class="max-w-4xl mx-auto">
+        <h1 class="text-2xl font-black text-yellow-400 mb-6 text-center">Team Builder HTML</h1>
+        <div id="team-area" class="grid gap-4 mb-8"></div>
+        <div class="card">
+            <input type="text" id="search" placeholder="Cari Pokemon..." class="w-full bg-slate-800 p-2 rounded mb-4">
+            <div id="library" class="grid grid-cols-6 gap-2"></div>
+        </div>
+    </div>
+
+    <script>
+        let team = [];
+        const libraryDiv = document.getElementById('library');
+        const teamArea = document.getElementById('team-area');
+        const searchInput = document.getElementById('search');
+
+        // Load Library
+        fetch('https://pokeapi.co/api/v2/pokemon?limit=151')
+            .then(res => res.json())
+            .then(data => {
+                data.results.forEach((p, i) => {
+                    const id = i + 1;
+                    const btn = document.createElement('button');
+                    btn.className = 'bg-slate-800 p-2 rounded hover:bg-yellow-600';
+                    btn.innerHTML = `<img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${id}.png" class="w-10 h-10 mx-auto">
+                                     <span class="text-[9px] capitalize">${p.name}</span>`;
+                    btn.onclick = () => addPokemon(p.name, id);
+                    libraryDiv.appendChild(btn);
+                });
+            });
+
+        function addPokemon(name, id) {
+            if(team.length >= 6) return;
+            const mon = { name, id, iv: {hp:0, atk:0}, moves:['Move 1', 'Move 2', 'Move 3', 'Move 4'] };
+            team.push(mon);
+            renderTeam();
+        }
+
+        function renderTeam() {
+            teamArea.innerHTML = team.map((mon, i) => `
+                <div class="card flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${mon.id}.png" class="w-12 h-12 bg-slate-800 rounded">
+                        <span class="capitalize font-bold">${mon.name}</span>
+                    </div>
+                    <div class="flex gap-2">
+                        <input type="number" placeholder="IV" class="w-12 bg-slate-800 p-1 rounded text-center">
+                        <button onclick="remove(${i})" class="text-red-500 font-bold">X</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function remove(i) { team.splice(i, 1); renderTeam(); }
+    </script>
+</body>
+</html>
