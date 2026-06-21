@@ -1,68 +1,237 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Pokedex Team Builder</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        body { background: #020617; color: white; font-family: sans-serif; }
-        .card { background: #0f172a; border: 1px solid #334155; padding: 1rem; border-radius: 0.75rem; }
-    </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Pokémon Team Builder</title>
+
+<style>
+  body {
+    margin: 0;
+    font-family: Arial;
+    background: #0f172a;
+    color: white;
+  }
+
+  h1 {
+    text-align: center;
+    color: gold;
+  }
+
+  .container {
+    display: flex;
+    gap: 10px;
+    padding: 10px;
+  }
+
+  .team, .library {
+    flex: 1;
+    background: #111827;
+    padding: 10px;
+    border-radius: 10px;
+    height: 80vh;
+    overflow-y: auto;
+  }
+
+  .pokemon-card {
+    background: #1f2937;
+    padding: 10px;
+    margin-bottom: 10px;
+    border-radius: 10px;
+  }
+
+  button {
+    cursor: pointer;
+    margin: 2px;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 5px;
+  }
+
+  .small {
+    font-size: 10px;
+  }
+
+  select, input {
+    width: 100%;
+    margin-top: 5px;
+  }
+
+</style>
 </head>
-<body class="p-4">
-    <div class="max-w-4xl mx-auto">
-        <h1 class="text-2xl font-black text-yellow-400 mb-6 text-center">Team Builder HTML</h1>
-        <div id="team-area" class="grid gap-4 mb-8"></div>
-        <div class="card">
-            <input type="text" id="search" placeholder="Cari Pokemon..." class="w-full bg-slate-800 p-2 rounded mb-4">
-            <div id="library" class="grid grid-cols-6 gap-2"></div>
-        </div>
-    </div>
 
-    <script>
-        let team = [];
-        const libraryDiv = document.getElementById('library');
-        const teamArea = document.getElementById('team-area');
-        const searchInput = document.getElementById('search');
+<body>
 
-        // Load Library
-        fetch('https://pokeapi.co/api/v2/pokemon?limit=151')
-            .then(res => res.json())
-            .then(data => {
-                data.results.forEach((p, i) => {
-                    const id = i + 1;
-                    const btn = document.createElement('button');
-                    btn.className = 'bg-slate-800 p-2 rounded hover:bg-yellow-600';
-                    btn.innerHTML = `<img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${id}.png" class="w-10 h-10 mx-auto">
-                                     <span class="text-[9px] capitalize">${p.name}</span>`;
-                    btn.onclick = () => addPokemon(p.name, id);
-                    libraryDiv.appendChild(btn);
-                });
-            });
+<h1>Pokémon Team Builder</h1>
 
-        function addPokemon(name, id) {
-            if(team.length >= 6) return;
-            const mon = { name, id, iv: {hp:0, atk:0}, moves:['Move 1', 'Move 2', 'Move 3', 'Move 4'] };
-            team.push(mon);
-            renderTeam();
-        }
+<div class="container">
 
-        function renderTeam() {
-            teamArea.innerHTML = team.map((mon, i) => `
-                <div class="card flex items-center justify-between">
-                    <div class="flex items-center gap-3">
-                        <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${mon.id}.png" class="w-12 h-12 bg-slate-800 rounded">
-                        <span class="capitalize font-bold">${mon.name}</span>
-                    </div>
-                    <div class="flex gap-2">
-                        <input type="number" placeholder="IV" class="w-12 bg-slate-800 p-1 rounded text-center">
-                        <button onclick="remove(${i})" class="text-red-500 font-bold">X</button>
-                    </div>
-                </div>
-            `).join('');
-        }
+  <!-- TEAM -->
+  <div class="team">
+    <h3>Team (max 6)</h3>
+    <div id="team"></div>
+  </div>
 
-        function remove(i) { team.splice(i, 1); renderTeam(); }
-    </script>
+  <!-- LIBRARY -->
+  <div class="library">
+    <h3>Pokémon List</h3>
+    <input id="search" placeholder="Search Pokémon..." />
+
+    <div class="grid" id="library"></div>
+  </div>
+
+</div>
+
+<!-- ITEM MODAL -->
+<div id="modal" style="display:none; position:fixed; inset:0; background:black; opacity:0.9; align-items:center; justify-content:center;">
+  <div style="background:#1f2937; padding:20px; border-radius:10px;">
+    <h3>Pilih Item</h3>
+    <div id="itemList"></div>
+    <button onclick="closeModal()">Close</button>
+  </div>
+</div>
+
+<script>
+let pokemonList = [];
+let team = [];
+let activeItemIndex = null;
+
+const items = [
+  "Leftovers","Life Orb","Choice Scarf","Choice Band",
+  "Choice Specs","Focus Sash","Assault Vest","Rocky Helmet"
+];
+
+// LOAD POKEMON
+fetch("https://pokeapi.co/api/v2/pokemon?limit=200")
+.then(res => res.json())
+.then(data => {
+  pokemonList = data.results.map(p => ({
+    name: p.name,
+    id: p.url.split("/")[6]
+  }));
+  renderLibrary();
+});
+
+// RENDER LIBRARY
+function renderLibrary() {
+  const lib = document.getElementById("library");
+  const search = document.getElementById("search").value.toLowerCase();
+
+  lib.innerHTML = "";
+
+  pokemonList
+    .filter(p => p.name.includes(search))
+    .forEach(p => {
+      const btn = document.createElement("button");
+      btn.innerHTML = `
+        <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${p.id}.png" />
+        <div class="small">${p.name}</div>
+      `;
+      btn.onclick = () => addPokemon(p);
+      lib.appendChild(btn);
+    });
+}
+
+document.getElementById("search").addEventListener("input", renderLibrary);
+
+// ADD POKEMON
+async function addPokemon(p) {
+  if (team.length >= 6) return;
+
+  const res = await fetch(`https://pokeapi.co/api/v2/pokemon/${p.id}`);
+  const data = await res.json();
+
+  team.push({
+    name: data.name,
+    id: p.id,
+    sprite: data.sprites.front_default,
+    shiny: data.sprites.front_shiny,
+    isShiny: false,
+    item: "None",
+    moves: data.moves.map(m => m.move.name).slice(0, 10),
+    selectedMoves: ["","","",""]
+  });
+
+  renderTeam();
+}
+
+// RENDER TEAM
+function renderTeam() {
+  const el = document.getElementById("team");
+  el.innerHTML = "";
+
+  team.forEach((t, i) => {
+    const div = document.createElement("div");
+    div.className = "pokemon-card";
+
+    div.innerHTML = `
+      <img src="${t.isShiny ? t.shiny : t.sprite}" />
+      <b style="text-transform:capitalize">${t.name}</b>
+
+      <br/>
+
+      <button onclick="toggleShiny(${i})">Shiny</button>
+      <button onclick="openItem(${i})">${t.item}</button>
+      <button onclick="removePokemon(${i})">Delete</button>
+
+      <div>
+        ${t.selectedMoves.map((m, idx) => `
+          <select onchange="setMove(${i}, ${idx}, this.value)">
+            <option value="">Move ${idx+1}</option>
+            ${t.moves.map(x => `<option value="${x}" ${x===m?"selected":""}>${x}</option>`)}
+          </select>
+        `).join("")}
+      </div>
+    `;
+
+    el.appendChild(div);
+  });
+}
+
+// ACTIONS
+function toggleShiny(i){
+  team[i].isShiny = !team[i].isShiny;
+  renderTeam();
+}
+
+function removePokemon(i){
+  team.splice(i,1);
+  renderTeam();
+}
+
+function setMove(i, slot, value){
+  team[i].selectedMoves[slot] = value;
+}
+
+function openItem(i){
+  activeItemIndex = i;
+
+  const modal = document.getElementById("modal");
+  const list = document.getElementById("itemList");
+
+  list.innerHTML = "";
+
+  items.forEach(item => {
+    const btn = document.createElement("button");
+    btn.innerText = item;
+    btn.onclick = () => {
+      team[i].item = item;
+      closeModal();
+      renderTeam();
+    };
+    list.appendChild(btn);
+  });
+
+  modal.style.display = "flex";
+}
+
+function closeModal(){
+  document.getElementById("modal").style.display = "none";
+}
+</script>
+
 </body>
 </html>
